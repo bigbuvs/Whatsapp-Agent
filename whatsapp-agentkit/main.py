@@ -10,7 +10,7 @@ from twilio.rest import Client as TwilioClient
 from agent.atlas import process_message
 from agent.memory import init_db
 
-AUTHORIZED_NUMBER = "whatsapp:+56944657212"
+AUTHORIZED_NUMBERS = {"whatsapp:+56944657212", "whatsapp:+56984392287"}
 TWILIO_ACCOUNT_SID = os.environ["TWILIO_ACCOUNT_SID"]
 TWILIO_AUTH_TOKEN = os.environ["TWILIO_AUTH_TOKEN"]
 TWILIO_PHONE_NUMBER = os.environ["TWILIO_PHONE_NUMBER"]
@@ -54,7 +54,7 @@ async def whatsapp_webhook(
         raise HTTPException(status_code=403, detail="Firma inválida")
 
     # Only respond to authorized number
-    if From != AUTHORIZED_NUMBER:
+    if From not in AUTHORIZED_NUMBERS:
         return Response(content="", media_type="text/plain", status_code=200)
 
     if not Body or not Body.strip():
