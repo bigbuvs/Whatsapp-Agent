@@ -17,9 +17,8 @@ env/
 dist/
 build/
 
-# Knowledge (archivos privados del negocio)
-knowledge/*
-!knowledge/.gitkeep
+# Knowledge — apuntes y archivos personales (repo es privado)
+# Atlas los lee automáticamente desde aquí
 
 # Session state
 config/session.yaml
