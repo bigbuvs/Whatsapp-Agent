@@ -23,16 +23,18 @@ async def process_message(phone: str, text: str) -> str:
         keyword = _extract_quoted_or_last_words(text)
         return await delete_event(phone, keyword)
 
-    if _matches(lower, ["qué tengo", "que tengo", "agenda", "eventos"]):
+    # Primero verificar si quiere AGREGAR un evento (tiene verbo + objeto)
+    if _matches(lower, ["agenda", "añade", "agrega", "crea", "programa", "agéndame", "añádeme"]) and \
+       _matches(lower, ["reunión", "evento", "cita", "clase", "recordatorio", "llamada", "para", "el", "mañana", "hoy", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]):
+        return await _handle_calendar_add(phone, text)
+
+    # Luego verificar si quiere CONSULTAR la agenda
+    if _matches(lower, ["qué tengo", "que tengo", "mi agenda", "mis eventos", "mis reuniones", "ver agenda"]):
         if "mañana" in lower:
             return await get_events(phone, "tomorrow")
         if "semana" in lower:
             return await get_events(phone, "week")
         return await get_events(phone, "today")
-
-    if _matches(lower, ["agenda", "añade", "agrega", "crea", "programa"]) and \
-       _matches(lower, ["reunión", "evento", "cita", "clase", "recordatorio", "para", "el"]):
-        return await _handle_calendar_add(phone, text)
 
     if lower in ["borrar historial", "limpiar historial", "nueva conversación"]:
         from agent.memory import clear_history
