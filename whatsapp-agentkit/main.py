@@ -45,8 +45,12 @@ async def whatsapp_webhook(
     Body: str = Form(...),
     NumMedia: str = Form(default="0"),
 ):
-    # Validate request comes from Twilio
-    url = str(request.url)
+    # Reconstruct the public HTTPS URL Twilio used to sign the request
+    # (Railway proxies internally over HTTP, so request.url is incorrect)
+    forwarded_proto = request.headers.get("x-forwarded-proto", "https")
+    host = request.headers.get("host", request.url.hostname)
+    url = f"{forwarded_proto}://{host}{request.url.path}"
+
     form_data = dict(await request.form())
     signature = request.headers.get("X-Twilio-Signature", "")
 
