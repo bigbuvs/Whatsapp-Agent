@@ -1,9 +1,10 @@
+import os
 import aiosqlite
 from datetime import datetime, date
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-DB_PATH = Path(__file__).parent.parent / "agentkit.db"
+DB_PATH = Path(os.environ.get("DB_PATH", str(Path(__file__).parent.parent / "agentkit.db")))
 TIMEZONE = "America/Santiago"
 
 

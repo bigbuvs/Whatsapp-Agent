@@ -1,8 +1,9 @@
+import os
 import aiosqlite
 from datetime import datetime
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / "agentkit.db"
+DB_PATH = Path(os.environ.get("DB_PATH", str(Path(__file__).parent.parent / "agentkit.db")))
 MAX_HISTORY = 20
 
 

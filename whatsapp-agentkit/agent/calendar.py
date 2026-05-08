@@ -1,9 +1,10 @@
+import os
 import aiosqlite
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent / "agentkit.db"
+DB_PATH = Path(os.environ.get("DB_PATH", str(Path(__file__).parent.parent / "agentkit.db")))
 
 
 async def add_event(phone: str, title: str, event_date: str, event_time: str = None, description: str = None) -> str:
