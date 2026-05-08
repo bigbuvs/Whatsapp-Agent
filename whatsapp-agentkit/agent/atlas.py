@@ -14,13 +14,21 @@ INTENT_PROMPT = """Analiza el siguiente mensaje y determina qué acción realiza
 Responde SOLO con un objeto JSON válido, sin texto adicional.
 
 Opciones:
-1. Crear evento: {"action": "add_event", "title": "...", "date": "YYYY-MM-DD", "time": "HH:MM o null"}
-2. Ver agenda hoy: {"action": "get_events", "period": "today"}
-3. Ver agenda mañana: {"action": "get_events", "period": "tomorrow"}
-4. Ver agenda semana: {"action": "get_events", "period": "week"}
-5. Eliminar evento: {"action": "delete_event", "keyword": "..."}
-6. Borrar historial: {"action": "clear_history"}
-7. Respuesta normal: {"action": "chat"}
+1. Crear UN evento: {{"action": "add_event", "title": "...", "date": "YYYY-MM-DD", "time": "HH:MM o null"}}
+2. Crear VARIOS eventos: {{"action": "add_multiple_events", "events": [{{"title": "...", "date": "YYYY-MM-DD", "time": "HH:MM o null"}}, ...]}}
+3. Ver agenda hoy: {{"action": "get_events", "period": "today"}}
+4. Ver agenda mañana: {{"action": "get_events", "period": "tomorrow"}}
+5. Ver agenda semana: {{"action": "get_events", "period": "week"}}
+6. Eliminar evento: {{"action": "delete_event", "keyword": "..."}}
+7. Borrar historial: {{"action": "clear_history"}}
+8. Respuesta normal (NO es sobre eventos): {{"action": "chat"}}
+
+Reglas:
+- Si el mensaje menciona agendar, programar, recordar, guardar, añadir UNO o VARIOS eventos → usa add_event o add_multiple_events
+- Si el message contiene una lista de eventos → SIEMPRE usa add_multiple_events con el array completo
+- Las fechas van en formato YYYY-MM-DD. Si dice "sábado 9 de mayo" → "2026-05-09"
+- Si no hay hora → null
+- Solo usa "chat" si el mensaje NO tiene nada que ver con eventos
 
 Fecha actual: {date}
 
@@ -37,18 +45,17 @@ async def process_message(phone: str, text: str) -> str:
     from datetime import datetime
     today = datetime.now().strftime("%A %d de %B de %Y")
 
-    # Ask Claude to detect intent
+    # Detect intent
     try:
         intent_resp = client.messages.create(
             model=MODEL,
-            max_tokens=150,
+            max_tokens=800,
             messages=[{
                 "role": "user",
                 "content": INTENT_PROMPT.format(date=today, message=text)
             }]
         )
         raw = intent_resp.content[0].text.strip()
-        # Extract JSON if wrapped in markdown
         json_match = re.search(r'\{.*\}', raw, re.DOTALL)
         intent = json.loads(json_match.group() if json_match else raw)
     except Exception:
@@ -69,8 +76,9 @@ async def process_message(phone: str, text: str) -> str:
         return await delete_event(phone, keyword)
 
     if action == "add_event":
+        from datetime import datetime as dt
         title = intent.get("title") or "Evento"
-        date = intent.get("date") or datetime.now().strftime("%Y-%m-%d")
+        date = intent.get("date") or dt.now().strftime("%Y-%m-%d")
         time = intent.get("time") or None
         if time == "null":
             time = None
@@ -79,7 +87,27 @@ async def process_message(phone: str, text: str) -> str:
         await save_message(phone, "assistant", result)
         return result
 
-    # Default: chat with Claude
+    if action == "add_multiple_events":
+        from datetime import datetime as dt
+        events = intent.get("events", [])
+        if not events:
+            return await _ask_claude(phone, text)
+
+        results = []
+        for evt in events:
+            title = evt.get("title") or "Evento"
+            date = evt.get("date") or dt.now().strftime("%Y-%m-%d")
+            time = evt.get("time") or None
+            if time == "null":
+                time = None
+            result = await add_event(phone, title, date, time)
+            results.append(result)
+
+        summary = "\n".join(results)
+        await save_message(phone, "user", text)
+        await save_message(phone, "assistant", summary)
+        return summary
+
     return await _ask_claude(phone, text)
 
 
